@@ -1,0 +1,67 @@
+parameters:
+  - name: serviceConnectionAcr
+  - name: serviceConnection
+  - name: repository
+    type: string
+  - name: acr
+    type: string
+  - name: imagetag
+    type: string
+    default: $(Build.BuildNumber) 
+  - name: trivyVersion
+    type: string
+    default: '0.9.1'
+  - name: image_name
+    type: string
+
+
+        
+steps:
+
+  - task: Docker@2
+    displayName: Login
+    inputs:
+      command: login
+      containerRegistry: ${{ parameters.serviceConnectionAcr }}              
+
+  - task: Docker@2
+    displayName: BuildImage
+    inputs:
+      command: build
+      containerRegistry: ${{ parameters.serviceConnectionAcr }}
+      repository: ${{ parameters.repository }}
+      dockerfile: $(Build.SourcesDirectory)/Dockerfile
+      tags: |
+        ${{ parameters.imagetag }}
+        latest
+
+  - script: |
+      sudo apt-get install rpm
+      wget https://github.com/aquasecurity/trivy/releases/download/v${{ parameters.trivyVersion }}/trivy_${{ parameters.trivyVersion }}_Linux-64bit.deb
+      sudo dpkg -i trivy_${{ parameters.trivyVersion }}_Linux-64bit.deb
+      trivy -v
+    displayName: 'Download and Install Trivy'
+
+  - script: |
+      mkdir report
+      trivy image --exit-code 1 -s HIGH,CRITICAL ${{ parameters.image_name }}:latest 
+      trivy image --exit-code 0 -s LOW,MEDIUM ${{ parameters.image_name }}:latest | tee ./report/trivy-image-scan-report_latest.txt 
+      trivy image --exit-code 1 -s HIGH,CRITICAL ${{ parameters.image_name }}:${{ parameters.imagetag }}
+      trivy image --exit-code 0 -s LOW,MEDIUM ${{ parameters.image_name }}:${{ parameters.imagetag }} | tee ./report/trivy-image-scan-report_${{ parameters.imagetag }}.txt 
+    displayName: "Image Scan By Trivy"
+    continueOnError: false 
+
+  - publish: ./report
+    artifact: ImageScan
+    displayName: Publishing Scan Report
+    condition: always()
+            
+  - task: Docker@2
+    displayName: PushImage
+    inputs:
+      command: push
+      containerRegistry: ${{ parameters.serviceConnectionAcr }} 
+      repository: ${{ parameters.repository }}
+      tags: |
+        ${{ parameters.imagetag }}
+        latest 
