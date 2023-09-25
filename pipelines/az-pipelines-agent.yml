@@ -1,3 +1,9 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest' #Testing with self-hosted agent
+
 parameters:
   - name: serviceConnectionAcr
   - name: serviceConnection
