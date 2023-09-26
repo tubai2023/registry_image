@@ -17,5 +17,5 @@ parameters:
 
 steps:
   - bash: |
-      echo $repository    
+      echo ${{ parameters.repository }}     
     name: Permission
