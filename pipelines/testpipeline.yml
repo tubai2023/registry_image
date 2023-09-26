@@ -3,6 +3,7 @@ parameters:
   - name: serviceConnection
   - name: repository
     type: string
+    default: 'myrepo'
   - name: acr
     type: string
   - name: imagetag
