@@ -16,5 +16,5 @@ parameters:
 
 steps:
   - bash: |
-      echo $serviceConnectionAcr    
+      echo $repository    
     name: Permission
